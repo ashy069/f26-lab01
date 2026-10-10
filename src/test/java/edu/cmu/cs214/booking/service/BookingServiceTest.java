@@ -62,7 +62,10 @@ class BookingServiceTest {
         assertEquals(2, svc.listBookings(roomA).size());
     }
 
-    // ========= Milestone2 cancelBooking 新增测试 =========
+    // ========= Milestone2 新增：cancelBooking 取消预约相关测试 =========
+    /**
+     * 取消不存在的预约ID：系统不做任何修改
+     */
     @Test
     void cancelNonExistentBooking_NoChanges() {
         BookingService svc = newService();
@@ -70,6 +73,9 @@ class BookingServiceTest {
         assertEquals(0, svc.listBookings(roomA).size());
     }
 
+    /**
+     * 取消预约，候补队列存在可升级用户：成功升级第一个符合条件候补
+     */
     @Test
     void cancelBooking_WithMatchingWaitlist_PromotesFirstEntry() {
         BookingService svc = newService();
@@ -89,6 +95,9 @@ class BookingServiceTest {
         assertEquals(bob, bookings.get(0).user());
     }
 
+    /**
+     * 取消预约，但房间仍保留其他正式预约，候补时间段冲突，不升级候补
+     */
     @Test
     void cancelBooking_NoPromoteBecauseOtherBookingRemains() {
         BookingService svc = newService();

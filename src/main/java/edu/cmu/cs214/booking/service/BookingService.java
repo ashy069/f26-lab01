@@ -65,25 +65,28 @@ public class BookingService {
         Booking canceledBooking = bookingOpt.get();
         Room targetRoom = canceledBooking.room();
 
-        // Step1: remove the canceled booking from store
+        // 步骤1：从存储中移除被取消的这条预约
         store.removeBooking(bookingId);
 
-        // Step2: get remaining confirmed bookings after deletion
+        // 步骤2：获取删除完成之后，该房间剩下的全部已确认预约
         List<Booking> remainingBookings = store.bookingsForRoom(targetRoom);
+        // 获取当前房间全部候补队列
         List<WaitlistEntry> waitlist = store.waitlistForRoom(targetRoom);
 
-        // Step3: iterate waitlist in seq order, find first promotable entry
+        // 步骤3：按候补原有顺序遍历，寻找第一个可以升级的候补条目
         for (WaitlistEntry entry : waitlist) {
             TimeInterval candidateInterval = entry.interval();
             boolean noOverlap = true;
+            // 判断该候补的时间段，是否和剩余任意正式预约发生时间重叠
             for (Booking b : remainingBookings) {
                 if (b.interval().overlaps(candidateInterval)) {
                     noOverlap = false;
                     break;
                 }
             }
+            // 时间段完全不冲突，可以升级该候补用户
             if (noOverlap) {
-                // promote this entry
+                // 创建新的正式预约并保存
                 store.removeWaitlistEntry(entry.id());
                 Booking newBooking = new Booking(
                         Integer.toString(nextBookingId++),
@@ -92,7 +95,7 @@ public class BookingService {
                         candidateInterval
                 );
                 store.addBooking(newBooking);
-                break; // promote at most one
+                break; // 最多只升级1人，完成后跳出循环
             }
         }
     }

@@ -6,6 +6,7 @@ import edu.cmu.cs214.booking.domain.TimeInterval;
 import edu.cmu.cs214.booking.domain.User;
 import edu.cmu.cs214.booking.domain.WaitlistEntry;
 import edu.cmu.cs214.booking.repo.BookingStore;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,7 +32,6 @@ public class BookingService {
         List<Booking> roomBookings = store.bookingsForRoom(room);
         boolean overlaps = roomBookings.stream()
                 .anyMatch(b -> b.interval().overlaps(interval));
-
         if (!overlaps) {
             Booking booking = new Booking(Integer.toString(nextBookingId++), room, user, interval);
             store.addBooking(booking);
@@ -64,17 +64,16 @@ public class BookingService {
         }
         Booking canceledBooking = bookingOpt.get();
         Room targetRoom = canceledBooking.room();
-
         // 步骤1：从存储中移除被取消的这条预约
         store.removeBooking(bookingId);
-
         // 步骤2：获取删除完成之后，该房间剩下的全部已确认预约
         List<Booking> remainingBookings = store.bookingsForRoom(targetRoom);
         // 获取当前房间全部候补队列
         List<WaitlistEntry> waitlist = store.waitlistForRoom(targetRoom);
-
+        // 【修复】创建候补队列快照，遍历快照避免ConcurrentModificationException
+        List<WaitlistEntry> snapshot = new ArrayList<>(waitlist);
         // 步骤3：按候补原有顺序遍历，寻找第一个可以升级的候补条目
-        for (WaitlistEntry entry : waitlist) {
+        for (WaitlistEntry entry : snapshot) {
             TimeInterval candidateInterval = entry.interval();
             boolean noOverlap = true;
             // 判断该候补的时间段，是否和剩余任意正式预约发生时间重叠
